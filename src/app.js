@@ -1,14 +1,18 @@
 import express from "express";
 import mongoose from "mongoose";
 import handlebars from "express-handlebars";
-import { Server } from "socket.io";
+import cookieParser from "cookie-parser";
+import session from "express-session";
+import FileStore from "session-file-store";
+import MongoStore from "connect-mongo";
 
 import { __dirname } from "./utils.js";
+import usersRouter from "./routes/users.routes.js";
 import viewsRouter from "./routes/views.routes.js";
 import productsRouter from "./routes/products.routes.js";
 import cartsRouter from "./routes/carts.routes.js";
-import chatRouter from "./routes/chat.routes.js";
-import { MessageManager } from "./controllers/message.manager.mdb.js";
+import cookiesRouter from "./routes/cookies.routes.js";
+import sessionRouter from "./routes/session.routes.js";
 
 const PORT = 8080;
 const MONGOOSE_URL =
@@ -17,6 +21,23 @@ const MONGOOSE_URL =
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser("secretKeyAbc123"));
+
+const fileStorage = FileStore(session);
+app.use(
+  session({
+    // store: new fileStorage({ path: "./sessions", ttl: 60, retries: 0 }),1
+    store: MongoStore.create({
+      mongoUrl: MONGOOSE_URL,
+      mongoOptions: {},
+      ttl: 60,
+      clearInterval: 5000,
+    }),
+    secret: "secretkeyabc132",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
 
 app.engine("handlebars", handlebars.engine());
 app.set("views", `${__dirname}/views`);
@@ -25,40 +46,16 @@ app.set("view engine", "handlebars");
 app.use("/", viewsRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/carts", cartsRouter);
+app.use("/api/cookies", cookiesRouter);
+app.use("/api/sessions", sessionRouter);
+app.use("/api/users", usersRouter);
 
 app.use("/static", express.static(`${__dirname}/public`));
-app.use("/chat", chatRouter);
-
-// CHAT
-
-let message = [];
 
 try {
   await mongoose.connect(MONGOOSE_URL);
   const server = app.listen(PORT, () => {
     console.log(`Backend activo ${PORT} conectado a base de datos`);
-  });
-
-  //
-
-  const io = new Server(server);
-  const manager = new MessageManager();
-
-  io.on("connection", (socket) => {
-    console.log(`Chat actual enviado a ${socket.id}`);
-
-    socket.on("user_connected", async (data) => {
-      message = await manager.getMessage();
-
-      socket.emit("messagesLogs", message);
-      socket.broadcast.emit("user_connected", data);
-    });
-
-    socket.on("message", async (data) => {
-      message.push(data);
-      await manager.addMessage(data);
-      io.emit("messagesLogs", message);
-    });
   });
 } catch (err) {
   console.log(`No se puede conectar con base de datos (${err.message})`);

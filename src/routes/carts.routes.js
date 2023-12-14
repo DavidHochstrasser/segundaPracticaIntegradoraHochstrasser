@@ -1,8 +1,14 @@
 import { Router } from "express";
 import { CartManager } from "../controllers/cart.manager.mdb.js";
+import cartsModel from "../models/carts.model.js";
 
 const router = Router();
 const manager = new CartManager();
+
+router.post("/", async (req, res) => {
+  const newCart = req.body;
+  res.status(200).send({ status: "Ok", data: await manager.addCart(newCart) });
+});
 
 router.get("/", async (req, res) => {
   try {
@@ -13,23 +19,31 @@ router.get("/", async (req, res) => {
 });
 
 router.delete("/:cid/products/:pid", async (req, res) => {
-  const cid = req.query;
-  const pid = req.query;
-  const deleteProductInCart = await manager.getCartAndDeleteProduct(cid, pid);
-
-  res.status(200).send({ status: "OK", data: deleteProductInCart });
+  try {
+    const { cid } = req.params;
+    const { pid } = req.params;
+    console.log("cid:", cid);
+    console.log("pid:", pid);
+    const deleteProductInCart = await manager.getCartAndDeleteProduct(cid, pid);
+    res.status(200).send({ status: "OK", data: deleteProductInCart });
+  } catch (err) {
+    res.status(500).send({ status: "Error", error: err.message });
+  }
 });
 
 router.put("/:cid/products/:pid", async (req, res) => {
-  const cid = req.params;
-  const pid = req.params;
-  const productUpdateInCart = await manager.updateCart(cid, pid);
-  res.status(200).send({ status: "OK", data: productUpdateInCart });
+  try {
+    const { cid } = req.params;
+    const { pid } = req.params;
+    const productUpdateInCart = await manager.updateCart(cid, pid);
+    res.status(200).send({ status: "OK", data: productUpdateInCart });
+  } catch (err) {
+    res.status(500).send({ status: "Error", error: err.message });
+  }
 });
 
-router.delete("/cid", async (req, res) => {
-  const cid = req.query.cid;
-
+router.delete("/:cid", async (req, res) => {
+  const { cid } = req.params;
   try {
     const deleteCart = await manager.deleteCart(cid);
     res.status(200).send({ status: "OK", data: deleteCart });
@@ -40,9 +54,13 @@ router.delete("/cid", async (req, res) => {
 
 router.put("/:cid", async (req, res) => {
   const cid = req.params;
-  const newContent = req.params;
-
-  const data = await manager.updateCart(cid, newContent);
+  const { title, description, price, thumbnail, code, stock } = req.body;
+  if (!title || !description || !price || !thumbnail || !code || !stock) {
+    return res
+      .status(400)
+      .send({ status: "ERR", data: "Faltan campos obligatorios" });
+  }
+  const data = await manager.updateCart({ _id: cid }, req.body);
   res.status(200).send({ status: "OK", data: data });
 });
 

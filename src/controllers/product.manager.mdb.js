@@ -33,14 +33,16 @@ class ProductManager {
     }
   }
 
-  async getProductsPaginated(page, limit, query) {
+  async getProductsPaginated(page, limit, code) {
     try {
-      return await productModel.paginate(
-        { code: query },
-        { offset: page, limit: limit, lean: true }
-      );
+      const query = code ? { code: code } : {};
+      return await productModel.paginate(query, {
+        offset: page,
+        limit: limit,
+        lean: true,
+      });
     } catch (err) {
-      return err.message;
+      return { status: "ERR", data: err.message };
     }
   }
 

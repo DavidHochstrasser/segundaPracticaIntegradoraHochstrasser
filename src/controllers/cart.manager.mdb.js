@@ -57,17 +57,36 @@ export class CartManager {
     try {
       const cart = await cartModel.findById(cid);
       if (!cart) {
-        throw new Error("No se encuentra el cart");
+        throw new Error("No se encuentra el carrito");
       }
-      const productInCart = await productModel.findByIdAndDelete(pid);
-      if (!productInCart) {
-        throw new Error("No se encuentra el product");
+      const productIndex = cart.products.indexOf(pid);
+      if (productIndex === -1) {
+        throw new Error("No se encuentra el producto en el carrito");
       }
-      return productInCart;
+      cart.products.splice(productIndex, 1);
+      await cart.save();
+      return { status: "OK", data: `Producto ${pid} eliminado del carrito` };
     } catch (err) {
-      return err.message;
+      return { status: "Error", error: err.message };
     }
   }
+
+  // async getCartAndDeleteProduct(cid, pid) {
+  //   try {
+  //     const cart = await cartModel.findById(cid);
+  //     if (!cart) {
+  //       throw new Error("No se encuentra el cart");
+  //     }
+  //     const productInCart = await productModel.findByIdAndDelete(pid);
+  //     if (!productInCart) {
+  //       throw new Error("No se encuentra el product");
+  //     }
+  //     return productInCart;
+  //   } catch (err) {
+  //     return err.message;
+  //   }
+  // }
+
   async getProduct(id) {
     try {
       const product = await productModel.findById(id);
