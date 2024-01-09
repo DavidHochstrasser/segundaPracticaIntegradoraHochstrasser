@@ -1,5 +1,10 @@
 import { Router } from "express";
+import usersModel from "../models/users.model.js";
+import { createHash, isValidPassword } from "../utils.js";
+import passport from "passport";
+import initPassport from "../config/passport.config.js";
 
+initPassport();
 const router = Router();
 
 const auth = (req, res, next) => {
@@ -59,13 +64,40 @@ router.get("/admin", auth, async (req, res) => {
   }
 });
 
+router.get("/hash/:pass", async (req, res) => {
+  res.status(200).send({ status: "OK", data: createHash(req.params.pass) });
+});
+
+router.get(
+  "/github",
+  passport.authenticate("githubAuth", { scope: ["user:email"] }),
+  async (req, res) => {}
+);
+
+router.get(
+  "/githubcallback",
+  passport.authenticate("githubAuth", { failureRedirect: "/login" }),
+  async (req, res) => {
+    req.session.user = { username: req.user.email, admin: true };
+    // req.session.user = req.user
+    res.redirect("/profile");
+  }
+);
+
+//davidh_42@hotmail.com
+//abc123
+
 router.post("/login", async (req, res) => {
   try {
-    const { user, pass } = req.body;
+    const { email, pass } = req.body;
 
-    if (user === "davidh" && pass === "abc123") {
-      req.session.user = { username: user, admin: true };
-      res.status(200).send({ status: "OK", data: "Sesión iniciada" });
+    const userInDb = await usersModel.findOne({ email: email });
+
+    if (userInDb !== null) {
+      if (isValidPassword(userInDb, pass)) {
+        req.session.user = { username: email, admin: true };
+        res.redirect("/profile");
+      }
     } else {
       res.status(401).send({ status: "ERR", data: "Datos no válidos" });
     }
@@ -74,6 +106,18 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.post("/register", async (req, res) => {});
+router.post(
+  "/register",
+  passport.authenticate("registerAuth", {
+    failureRedirect: "/api/sessions/failregister",
+  }),
+  async (req, res) => {
+    try {
+      res.status(200).send({ status: "OK", data: "Usuario registrado" });
+    } catch (err) {
+      res.status(500).send({ status: "ERR", data: err.message });
+    }
+  }
+);
 
 export default router;
