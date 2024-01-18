@@ -15,9 +15,11 @@ import cartsRouter from "./routes/carts.routes.js";
 import cookiesRouter from "./routes/cookies.routes.js";
 import sessionRouter from "./routes/session.routes.js";
 
-const PORT = 8080;
-const MONGOOSE_URL =
-  "mongodb+srv://coder_55605:Balcon580@cluster0.ndlarik.mongodb.net/ecommerce";
+import config from "./config.js";
+
+// const PORT = 8080;
+// const MONGOOSE_URL =
+//   "mongodb+srv://coder_55605:Balcon580@cluster0.ndlarik.mongodb.net/ecommerce";
 
 const app = express();
 app.use(express.json());
@@ -29,7 +31,7 @@ app.use(
   session({
     // store: new fileStorage({ path: "./sessions", ttl: 60, retries: 0 }),1
     store: MongoStore.create({
-      mongoUrl: MONGOOSE_URL,
+      mongoUrl: config.MONGO_URL,
       mongoOptions: {},
       ttl: 60,
       clearInterval: 5000,
@@ -56,9 +58,9 @@ app.use("/api/users", usersRouter);
 app.use("/static", express.static(`${__dirname}/public`));
 
 try {
-  await mongoose.connect(MONGOOSE_URL);
-  const server = app.listen(PORT, () => {
-    console.log(`Backend activo ${PORT} conectado a base de datos`);
+  await mongoose.connect(config.MONGO_URL);
+  const server = app.listen(config.PORT, () => {
+    console.log(`Backend activo ${config.PORT} conectado a base de datos`);
   });
 } catch (err) {
   console.log(`No se puede conectar con base de datos (${err.message})`);
